@@ -1,0 +1,16 @@
+C:\Users\Nivla\AppData\Local\Temporary Projects\MyMastercoinsWallet\bin\Debug\MyMastercoinsWallet.exe.config
+C:\Users\Nivla\AppData\Local\Temporary Projects\MyMastercoinsWallet\bin\Debug\MyMastercoinsWallet.exe
+C:\Users\Nivla\AppData\Local\Temporary Projects\MyMastercoinsWallet\bin\Debug\MyMastercoinsWallet.pdb
+C:\Users\Nivla\AppData\Local\Temporary Projects\MyMastercoinsWallet\bin\Debug\MyMastercoinsWallet.xml
+C:\Users\Nivla\AppData\Local\Temporary Projects\MyMastercoinsWallet\bin\Debug\BouncyCastle.Crypto.dll
+C:\Users\Nivla\AppData\Local\Temporary Projects\MyMastercoinsWallet\bin\Debug\Newtonsoft.Json.dll
+C:\Users\Nivla\AppData\Local\Temporary Projects\MyMastercoinsWallet\bin\Debug\Newtonsoft.Json.pdb
+C:\Users\Nivla\AppData\Local\Temporary Projects\MyMastercoinsWallet\bin\Debug\Newtonsoft.Json.xml
+C:\Users\Nivla\AppData\Local\Temporary Projects\MyMastercoinsWallet\obj\x86\Debug\MyMastercoinsWallet.vbprojResolveAssemblyReference.cache
+C:\Users\Nivla\AppData\Local\Temporary Projects\MyMastercoinsWallet\obj\x86\Debug\MyMastercoinsWallet.Form1.resources
+C:\Users\Nivla\AppData\Local\Temporary Projects\MyMastercoinsWallet\obj\x86\Debug\MyMastercoinsWallet.Form2.resources
+C:\Users\Nivla\AppData\Local\Temporary Projects\MyMastercoinsWallet\obj\x86\Debug\MyMastercoinsWallet.Resources.resources
+C:\Users\Nivla\AppData\Local\Temporary Projects\MyMastercoinsWallet\obj\x86\Debug\MyMastercoinsWallet.vbproj.GenerateResource.Cache
+C:\Users\Nivla\AppData\Local\Temporary Projects\MyMastercoinsWallet\obj\x86\Debug\MyMastercoinsWallet.exe
+C:\Users\Nivla\AppData\Local\Temporary Projects\MyMastercoinsWallet\obj\x86\Debug\MyMastercoinsWallet.xml
+C:\Users\Nivla\AppData\Local\Temporary Projects\MyMastercoinsWallet\obj\x86\Debug\MyMastercoinsWallet.pdb
