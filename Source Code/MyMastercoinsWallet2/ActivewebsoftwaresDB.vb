@@ -10,7 +10,7 @@ Namespace AWS.DB
     Public Class ConnectDB
 
         Function ConnectDB() As SqlConnection
-            Dim ConnectString As String = "Data Source=[SQL];Initial Catalog=[SQLDB];User ID=[UserID];Password=[Password];Integrated Security=False;"
+            Dim ConnectString As String = Trim(My.Settings.ConnectString)
             Dim myConn As New SqlConnection(ConnectString)
             Return myConn
         End Function

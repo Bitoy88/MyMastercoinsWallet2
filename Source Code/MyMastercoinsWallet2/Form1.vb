@@ -49,7 +49,13 @@ Class Form1
     End Sub
 
     Private Sub Form1_Load(ByVal sender As Object, ByVal e As EventArgs) Handles MyBase.Load
-        Me.Text += " 2.00.04"
+        Me.Text += " 2.01.00"
+        If My.Settings.ConnectString = "" Then
+            '            My.Settings.ConnectString = "Data Source=tcp:s09.winhost.com;Initial Catalog=DB_66808_mymsc;User ID=DB_66808_mymsc_user;Password=88BottlesofBeer;Integrated Security=False;"
+            My.Settings.ConnectString = "Data Source=.\SQLEXPRESS;AttachDbFilename=""" + CurDir() + "\MYMASTERCOINS.MDF"";Integrated Security=True;User Instance=True"
+        End If
+        txtConnectString.Text = My.Settings.ConnectString
+
         If Not File.Exists(My.Settings.BitcoindExe) Then
             If lOK("Can't find bitcoind.exe.  Would you like me to look for it (If not, a file dialog box will open and you have to manually find bitcoind.exe)?") Then
                 My.Settings.BitcoindExe = FindBitcoind(Path.GetPathRoot(CurDir) + "Program Files (x86)")
@@ -67,8 +73,13 @@ Class Form1
             My.Settings.Save()
         End If
 
-        txtBitcoindexe.Text = My.Settings.BitcoindExe
-        Process.Start(txtBitcoindexe.Text, "-daemon")
+        txtBitcoindexe.Text = Trim(My.Settings.BitcoindExe)
+        txtDataDir.Text = Trim(My.Settings.DataDir)
+        If txtDataDir.Text = "" Then
+            Process.Start(txtBitcoindexe.Text, "-daemon")
+        Else
+            Process.Start(txtBitcoindexe.Text, "-datadir=" + txtDataDir.Text + " -daemon")
+        End If
 
         ResetaUpdated()
 
@@ -344,6 +355,8 @@ Class Form1
 
     Private Sub Button1_Click_2(ByVal sender As System.Object, ByVal e As System.EventArgs) Handles Button1.Click
         My.Settings.BitcoindExe = txtBitcoindexe.Text
+        My.Settings.DataDir = txtDataDir.Text
+        My.Settings.ConnectString = txtConnectString.Text
         My.Settings.Save()
         MsgBox("Settings updated.")
 
@@ -479,8 +492,12 @@ Class Form1
 
 
     Private Sub Timer1_Tick(ByVal sender As System.Object, ByVal e As System.EventArgs) Handles Timer1.Tick
-        '10 minute refresh
         Timer1.Interval = 600000
+        txtMessage.Text = "Uploading Transactions "
+        Call (New mymastercoins).GetExodusTransBlockExplorer()
+        txtMessage.Text = "Processing Transactions "
+        Call (New mymastercoins).ProcessTransactions()
+        txtMessage.Text = ""
         GetTransactions()
     End Sub
 
@@ -964,6 +981,50 @@ Class Form1
             End If
             lblCurrentBlockTime.Text = "Current Block Time: " + (New Bitcoin).GetBlockCount.ToString
         End If
+    End Sub
+
+    Private Sub Button9_Click_1(ByVal sender As System.Object, ByVal e As System.EventArgs) Handles Button9.Click
+        Timer1.Enabled = False
+        txtMessage.Text = "Uploading Transactions "
+        Call (New mymastercoins).GetExodusTransBlockExplorer()
+        txtMessage.Text = "Processing Transactions "
+        Call (New mymastercoins).ProcessTransactions()
+
+        ResetProgbar(1)
+        txtMessage.Text = "Loading " + Trim(cboVerify.Text)
+        Dim obj As New JArray
+        Dim json As String = (New Bitcoin).getjson(Trim(cboVerify.Text))
+        obj = JsonConvert.DeserializeObject(json)
+        Dim i As Integer
+        Dim s As String = ""
+        ResetProgbar(obj.Count)
+        For i = 0 To obj.Count - 1
+            updateprogbar()
+            Dim Address As String = Trim(obj.Item(i).Item("address").ToString)
+            Dim Balance As Double = 0
+            If obj.Item(i).Item("balance").ToString <> "" Then
+                Balance = Math.Round(CDbl(obj.Item(i).Item("balance")), 8)
+            End If
+            'Exclude Exodus Address from Checking
+            If Address <> "1EXoDusjGwvnjZUyKkxZ4UHEf77z6A5S4P" Then
+                Dim AddressID As Integer = (New mymastercoins).GetAddressID(Address)
+                If AddressID > 0 Then
+                    Dim OffertoSell As Double = (New mymastercoins).GetCurrencyForSale(AddressID, 1)
+                    Dim BalanceMM As Double = Math.Round((New mymastercoins).GetAddressBalance(AddressID, 1) - OffertoSell, 8)
+                    If BalanceMM <> Balance Then
+                        s += BalanceMM.ToString + " " + Address + " " + Balance.ToString + vbCrLf
+                    End If
+                End If
+            End If
+        Next
+        clearprogbar()
+        If s <> "" Then
+            txtMessage.Text = "Wallet is not verified."
+            MsgBox(s)
+        Else
+            txtMessage.Text = "Wallet is verified and updated. " + Now().ToString
+        End If
+        Timer1.Enabled = True
     End Sub
 End Class
 

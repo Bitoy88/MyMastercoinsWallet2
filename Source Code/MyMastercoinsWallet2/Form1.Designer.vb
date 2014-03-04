@@ -142,6 +142,11 @@ Partial Class Form1
         Me.BTCPaid = New System.Windows.Forms.DataGridViewTextBoxColumn()
         Me.Column1 = New System.Windows.Forms.DataGridViewTextBoxColumn()
         Me.tabSettings = New System.Windows.Forms.TabPage()
+        Me.cboVerify = New System.Windows.Forms.ComboBox()
+        Me.Label30 = New System.Windows.Forms.Label()
+        Me.Button9 = New System.Windows.Forms.Button()
+        Me.Label29 = New System.Windows.Forms.Label()
+        Me.txtDataDir = New System.Windows.Forms.TextBox()
         Me.Label8 = New System.Windows.Forms.Label()
         Me.Button6 = New System.Windows.Forms.Button()
         Me.txtPrivateKey = New System.Windows.Forms.TextBox()
@@ -1250,6 +1255,11 @@ Partial Class Form1
         '
         'tabSettings
         '
+        Me.tabSettings.Controls.Add(Me.cboVerify)
+        Me.tabSettings.Controls.Add(Me.Label30)
+        Me.tabSettings.Controls.Add(Me.Button9)
+        Me.tabSettings.Controls.Add(Me.Label29)
+        Me.tabSettings.Controls.Add(Me.txtDataDir)
         Me.tabSettings.Controls.Add(Me.Label8)
         Me.tabSettings.Controls.Add(Me.Button6)
         Me.tabSettings.Controls.Add(Me.txtPrivateKey)
@@ -1275,10 +1285,54 @@ Partial Class Form1
         Me.tabSettings.Text = "Settings"
         Me.tabSettings.UseVisualStyleBackColor = True
         '
+        'cboVerify
+        '
+        Me.cboVerify.FormattingEnabled = True
+        Me.cboVerify.Items.AddRange(New Object() {"https://masterchest.info/mastercoin_verify/addresses.aspx", "https://masterchain.info/mastercoin_verify/addresses/0", "http://www.mymastercoins.com/jaddress.aspx"})
+        Me.cboVerify.Location = New System.Drawing.Point(110, 238)
+        Me.cboVerify.Name = "cboVerify"
+        Me.cboVerify.Size = New System.Drawing.Size(364, 21)
+        Me.cboVerify.TabIndex = 36
+        Me.cboVerify.Text = "http://www.mymastercoins.com/jaddress.aspx"
+        '
+        'Label30
+        '
+        Me.Label30.AutoSize = True
+        Me.Label30.Location = New System.Drawing.Point(18, 241)
+        Me.Label30.Name = "Label30"
+        Me.Label30.Size = New System.Drawing.Size(61, 13)
+        Me.Label30.TabIndex = 31
+        Me.Label30.Text = "Verify URL:"
+        '
+        'Button9
+        '
+        Me.Button9.Location = New System.Drawing.Point(110, 267)
+        Me.Button9.Name = "Button9"
+        Me.Button9.Size = New System.Drawing.Size(138, 23)
+        Me.Button9.TabIndex = 29
+        Me.Button9.Text = "Verify Wallet"
+        Me.Button9.UseVisualStyleBackColor = True
+        '
+        'Label29
+        '
+        Me.Label29.AutoSize = True
+        Me.Label29.Location = New System.Drawing.Point(6, 58)
+        Me.Label29.Name = "Label29"
+        Me.Label29.Size = New System.Drawing.Size(44, 13)
+        Me.Label29.TabIndex = 28
+        Me.Label29.Text = "Datadir:"
+        '
+        'txtDataDir
+        '
+        Me.txtDataDir.Location = New System.Drawing.Point(110, 58)
+        Me.txtDataDir.Name = "txtDataDir"
+        Me.txtDataDir.Size = New System.Drawing.Size(364, 20)
+        Me.txtDataDir.TabIndex = 27
+        '
         'Label8
         '
         Me.Label8.AutoSize = True
-        Me.Label8.Location = New System.Drawing.Point(20, 159)
+        Me.Label8.Location = New System.Drawing.Point(8, 159)
         Me.Label8.Name = "Label8"
         Me.Label8.Size = New System.Drawing.Size(64, 13)
         Me.Label8.TabIndex = 26
@@ -1286,7 +1340,7 @@ Partial Class Form1
         '
         'Button6
         '
-        Me.Button6.Location = New System.Drawing.Point(101, 192)
+        Me.Button6.Location = New System.Drawing.Point(110, 194)
         Me.Button6.Name = "Button6"
         Me.Button6.Size = New System.Drawing.Size(138, 23)
         Me.Button6.TabIndex = 24
@@ -1295,7 +1349,7 @@ Partial Class Form1
         '
         'txtPrivateKey
         '
-        Me.txtPrivateKey.Location = New System.Drawing.Point(101, 159)
+        Me.txtPrivateKey.Location = New System.Drawing.Point(110, 159)
         Me.txtPrivateKey.Name = "txtPrivateKey"
         Me.txtPrivateKey.Size = New System.Drawing.Size(364, 20)
         Me.txtPrivateKey.TabIndex = 23
@@ -1303,24 +1357,22 @@ Partial Class Form1
         'Label19
         '
         Me.Label19.AutoSize = True
-        Me.Label19.Location = New System.Drawing.Point(535, 293)
+        Me.Label19.Location = New System.Drawing.Point(6, 87)
         Me.Label19.Name = "Label19"
         Me.Label19.Size = New System.Drawing.Size(98, 13)
         Me.Label19.TabIndex = 21
         Me.Label19.Text = "DB Connect String:"
-        Me.Label19.Visible = False
         '
         'txtConnectString
         '
-        Me.txtConnectString.Location = New System.Drawing.Point(636, 290)
+        Me.txtConnectString.Location = New System.Drawing.Point(110, 84)
         Me.txtConnectString.Name = "txtConnectString"
-        Me.txtConnectString.Size = New System.Drawing.Size(478, 20)
+        Me.txtConnectString.Size = New System.Drawing.Size(515, 20)
         Me.txtConnectString.TabIndex = 22
-        Me.txtConnectString.Visible = False
         '
         'txtBTCWalletPP
         '
-        Me.txtBTCWalletPP.Location = New System.Drawing.Point(101, 89)
+        Me.txtBTCWalletPP.Location = New System.Drawing.Point(110, 307)
         Me.txtBTCWalletPP.Name = "txtBTCWalletPP"
         Me.txtBTCWalletPP.PasswordChar = Global.Microsoft.VisualBasic.ChrW(42)
         Me.txtBTCWalletPP.Size = New System.Drawing.Size(364, 20)
@@ -1330,7 +1382,7 @@ Partial Class Form1
         'Label2
         '
         Me.Label2.AutoSize = True
-        Me.Label2.Location = New System.Drawing.Point(18, 34)
+        Me.Label2.Location = New System.Drawing.Point(6, 34)
         Me.Label2.Name = "Label2"
         Me.Label2.Size = New System.Drawing.Size(66, 13)
         Me.Label2.TabIndex = 17
@@ -1338,7 +1390,7 @@ Partial Class Form1
         '
         'txtBitcoindexe
         '
-        Me.txtBitcoindexe.Location = New System.Drawing.Point(101, 34)
+        Me.txtBitcoindexe.Location = New System.Drawing.Point(110, 34)
         Me.txtBitcoindexe.Name = "txtBitcoindexe"
         Me.txtBitcoindexe.Size = New System.Drawing.Size(364, 20)
         Me.txtBitcoindexe.TabIndex = 16
@@ -1384,7 +1436,7 @@ Partial Class Form1
         '
         'Button1
         '
-        Me.Button1.Location = New System.Drawing.Point(101, 60)
+        Me.Button1.Location = New System.Drawing.Point(110, 110)
         Me.Button1.Name = "Button1"
         Me.Button1.Size = New System.Drawing.Size(75, 23)
         Me.Button1.TabIndex = 11
@@ -1587,7 +1639,7 @@ Partial Class Form1
         'Timer1
         '
         Me.Timer1.Enabled = True
-        Me.Timer1.Interval = 600000
+        Me.Timer1.Interval = 60000
         '
         'Button4
         '
@@ -1819,5 +1871,10 @@ Partial Class Form1
     Friend WithEvents cboCurrencyBuy As System.Windows.Forms.ComboBox
     Friend WithEvents Label3 As System.Windows.Forms.Label
     Friend WithEvents cboCurrencyPayment As System.Windows.Forms.ComboBox
+    Friend WithEvents Label29 As System.Windows.Forms.Label
+    Friend WithEvents txtDataDir As System.Windows.Forms.TextBox
+    Friend WithEvents Button9 As System.Windows.Forms.Button
+    Friend WithEvents Label30 As System.Windows.Forms.Label
+    Friend WithEvents cboVerify As System.Windows.Forms.ComboBox
 
 End Class

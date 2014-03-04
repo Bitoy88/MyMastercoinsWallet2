@@ -1,6 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <asmv1:assembly xsi:schemaLocation="urn:schemas-microsoft-com:asm.v1 assembly.adaptive.xsd" manifestVersion="1.0" xmlns:asmv1="urn:schemas-microsoft-com:asm.v1" xmlns="urn:schemas-microsoft-com:asm.v2" xmlns:asmv2="urn:schemas-microsoft-com:asm.v2" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:co.v1="urn:schemas-microsoft-com:clickonce.v1" xmlns:asmv3="urn:schemas-microsoft-com:asm.v3" xmlns:dsig="http://www.w3.org/2000/09/xmldsig#" xmlns:co.v2="urn:schemas-microsoft-com:clickonce.v2">
-  <asmv1:assemblyIdentity name="MyMastercoinsWallet2.exe" version="2.0.0.0" publicKeyToken="0000000000000000" language="neutral" processorArchitecture="x86" type="win32" />
+  <asmv1:assemblyIdentity name="MyMastercoinsWallet2.exe" version="2.1.0.0" publicKeyToken="0000000000000000" language="neutral" processorArchitecture="x86" type="win32" />
   <application />
   <entryPoint>
     <assemblyIdentity name="MyMastercoinsWallet2" version="1.0.0.0" language="neutral" processorArchitecture="x86" />
@@ -54,24 +54,42 @@
     </dependentAssembly>
   </dependency>
   <dependency>
-    <dependentAssembly dependencyType="install" allowDelayedBinding="true" codebase="MyMastercoinsWallet2.exe" size="174592">
+    <dependentAssembly dependencyType="install" allowDelayedBinding="true" codebase="MyMastercoinsWallet2.exe" size="185856">
       <assemblyIdentity name="MyMastercoinsWallet2" version="1.0.0.0" language="neutral" processorArchitecture="x86" />
       <hash>
         <dsig:Transforms>
           <dsig:Transform Algorithm="urn:schemas-microsoft-com:HashTransforms.Identity" />
         </dsig:Transforms>
         <dsig:DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha1" />
-        <dsig:DigestValue>wOz9LCQ17k5WVJYKamFtiW5Ctws=</dsig:DigestValue>
+        <dsig:DigestValue>6l/2YkkmN164eg6choZujRkxiQI=</dsig:DigestValue>
       </hash>
     </dependentAssembly>
   </dependency>
-  <file name="MyMastercoinsWallet2.exe.config" size="2901">
+  <file name="MyMastercoins.MDF" size="52428800">
     <hash>
       <dsig:Transforms>
         <dsig:Transform Algorithm="urn:schemas-microsoft-com:HashTransforms.Identity" />
       </dsig:Transforms>
       <dsig:DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha1" />
-      <dsig:DigestValue>JWnLZ6W+CV4EAmhveCb68uce6dw=</dsig:DigestValue>
+      <dsig:DigestValue>6jGSvqOubGIdP++9cK1uf72vAnU=</dsig:DigestValue>
+    </hash>
+  </file>
+  <file name="MyMastercoins_log.ldf" size="36569088" writeableType="applicationData">
+    <hash>
+      <dsig:Transforms>
+        <dsig:Transform Algorithm="urn:schemas-microsoft-com:HashTransforms.Identity" />
+      </dsig:Transforms>
+      <dsig:DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha1" />
+      <dsig:DigestValue>ESwXCvneRZriniXoqzcz0fXMims=</dsig:DigestValue>
+    </hash>
+  </file>
+  <file name="MyMastercoinsWallet2.exe.config" size="3011">
+    <hash>
+      <dsig:Transforms>
+        <dsig:Transform Algorithm="urn:schemas-microsoft-com:HashTransforms.Identity" />
+      </dsig:Transforms>
+      <dsig:DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha1" />
+      <dsig:DigestValue>RP7KkgM0HQpD1WKR9uavaILFga8=</dsig:DigestValue>
     </hash>
   </file>
   <file name="Newtonsoft.Json.dll" size="456192">

@@ -194,6 +194,18 @@ Namespace My
                 Me("DTAddressBook") = value
             End Set
         End Property
+        
+        <Global.System.Configuration.UserScopedSettingAttribute(),  _
+         Global.System.Diagnostics.DebuggerNonUserCodeAttribute(),  _
+         Global.System.Configuration.DefaultSettingValueAttribute("")>  _
+        Public Property DataDir() As String
+            Get
+                Return CType(Me("DataDir"),String)
+            End Get
+            Set
+                Me("DataDir") = value
+            End Set
+        End Property
     End Class
 End Namespace
 

@@ -13,8 +13,10 @@ C:\Users\Nivla\Documents\Visual Studio 2010\Projects\MyMastercoinsWallet2\MyMast
 C:\Users\Nivla\Documents\Visual Studio 2010\Projects\MyMastercoinsWallet2\MyMastercoinsWallet2\obj\x86\Debug\MyMastercoinsWallet2.exe
 C:\Users\Nivla\Documents\Visual Studio 2010\Projects\MyMastercoinsWallet2\MyMastercoinsWallet2\obj\x86\Debug\MyMastercoinsWallet2.xml
 C:\Users\Nivla\Documents\Visual Studio 2010\Projects\MyMastercoinsWallet2\MyMastercoinsWallet2\obj\x86\Debug\MyMastercoinsWallet2.pdb
-C:\Users\Nivla\Documents\Visual Studio 2010\Projects\MyMastercoinsWallet2\MyMastercoinsWallet2\obj\x86\Debug\MyMastercoinsWallet2.vbprojResolveAssemblyReference.cache
 C:\Users\Nivla\Documents\Visual Studio 2010\Projects\MyMastercoinsWallet2\MyMastercoinsWallet2\bin\Debug\MyMastercoinsWallet2.exe.manifest
 C:\Users\Nivla\Documents\Visual Studio 2010\Projects\MyMastercoinsWallet2\MyMastercoinsWallet2\bin\Debug\MyMastercoinsWallet2.application
 C:\Users\Nivla\Documents\Visual Studio 2010\Projects\MyMastercoinsWallet2\MyMastercoinsWallet2\obj\x86\Debug\MyMastercoinsWallet2.exe.manifest
 C:\Users\Nivla\Documents\Visual Studio 2010\Projects\MyMastercoinsWallet2\MyMastercoinsWallet2\obj\x86\Debug\MyMastercoinsWallet2.application
+C:\Users\Nivla\Documents\Visual Studio 2010\Projects\MyMastercoinsWallet2\MyMastercoinsWallet2\obj\x86\Debug\MyMastercoinsWallet2.vbprojResolveAssemblyReference.cache
+C:\Users\Nivla\Documents\Visual Studio 2010\Projects\MyMastercoinsWallet2\MyMastercoinsWallet2\bin\Debug\MyMastercoins.MDF
+C:\Users\Nivla\Documents\Visual Studio 2010\Projects\MyMastercoinsWallet2\MyMastercoinsWallet2\bin\Debug\MyMastercoins_log.ldf
