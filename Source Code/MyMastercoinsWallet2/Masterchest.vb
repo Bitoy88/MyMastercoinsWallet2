@@ -310,6 +310,9 @@ Public Class mlib
             If param3 <> "0" Then
                 params += param3
             End If
+            If Trim(My.Settings.DataDir).Length > 0 Then
+                params += " -datadir=" + Trim(My.Settings.DataDir)
+            End If
 
             Dim arg As String = method + " " + Trim(params)
             process.StartInfo.Arguments = arg

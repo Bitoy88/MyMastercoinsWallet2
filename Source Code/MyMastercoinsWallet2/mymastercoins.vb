@@ -39,10 +39,78 @@ Public Class mymastercoins
         Ctr += NBytes
         Return n.ToString
     End Function
+    Function GetReserves(ByVal SenderID As Integer, ByVal CurrencyID As Integer, ByVal BlockNumber As Integer) As Double
+        Dim Sql As String = "select * from z_CurrencyforSale where AddressID=" & SenderID.ToString & " and CurrencyID= " & CurrencyID & " and IsNewOffer=1"
+        Dim DSAvailable As DataSet = (New AWS.DB.ConnectDB).SQLdataset(Sql)
+        Dim SellOfferReserve As Double = 0
+        Dim CurrencyforSaleID As Integer = 0
+        If DSAvailable.Tables(0).DefaultView.Count > 0 Then
+            CurrencyforSaleID = DSAvailable.Tables(0).Rows(0).Item("CurrencyforSaleID")
+            Dim Available As Double = DSAvailable.Tables(0).Rows(0).Item("Available")
+            SellOfferReserve = Available
+        End If
+        Dim PendingPayment As Double = 0
+
+        Sql = "SELECT sum(PurchasedAmount-PaidPurchasedAmount) as Pending" + _
+" FROM z_PurchasingCurrency" + _
+" WHERE z_PurchasingCurrency.SellerID=" + SenderID.ToString + _
+" and z_PurchasingCurrency.CurrencyforSaleID<>" & CurrencyforSaleID.ToString + _
+" and z_PurchasingCurrency.MaxBlockNo>=" + BlockNumber.ToString + _
+" and z_PurchasingCurrency.CurrencyID=" + CurrencyID.ToString
+        Dim DSPending As DataSet = (New AWS.DB.ConnectDB).SQLdataset(Sql)
+        If DSPending.Tables(0).DefaultView.Count > 0 Then
+            If Not IsDBNull(DSPending.Tables(0).Rows(0).Item("Pending")) Then
+                PendingPayment = DSPending.Tables(0).Rows(0).Item("Pending")
+            End If
+        End If
+
+        Return SellOfferReserve + PendingPayment
+    End Function
+
+    Function GetBEMinerFee(ByVal beIn As String, ByVal beOut As String) As Double
+
+        Dim Prevouthash As String = ""
+        Dim n As Integer = 0
+        Dim Value As Double = 0
+
+        Dim ccArrayIn As JArray = JsonConvert.DeserializeObject(beIn)
+        Dim TotalIn As Double = 0
+        For Each subitem In ccArrayIn
+            Prevouthash = subitem("prev_out").Item("hash")
+            n = CInt(subitem("prev_out").Item("n"))
+            Call GetReferenceFromPrevHash(Prevouthash, n, Value)
+            TotalIn += Value
+        Next
+
+        Dim ccArrayOut As JArray = JsonConvert.DeserializeObject(beOut)
+        Dim TotalOut As Double = 0
+        For Each subitem In ccArrayOut
+            TotalOut += Val(subitem("value").ToString)
+        Next
+
+        Return Math.Round(TotalIn - TotalOut, 8)
+
+    End Function
+
+    Function GetBCMinerFee(ByVal bcIn As String, ByVal bcOut As String) As Double
+        Dim ccArrayIn As JArray = JsonConvert.DeserializeObject(bcIn)
+        Dim TotalIn As Long = 0
+        For Each subitem In ccArrayIn
+            TotalIn += Val(subitem.Item("prev_out").Item("value").ToString)
+        Next
+
+        Dim ccArrayOut As JArray = JsonConvert.DeserializeObject(bcOut)
+        Dim TotalOut As Long = 0
+        For Each subitem In ccArrayOut
+            TotalOut += Val(subitem.Item("value").ToString)
+        Next
+
+        Return Math.Round(SattoAmount(TotalIn - TotalOut), 8)
+    End Function
 
     Sub ProcessTransactions()
         Dim SQL As String = "SELECT  * from z_Exodus where IsProcessed=0 order by blocknumber,ExodusID"
-        Dim MSCBlockStart As Integer = 999999999
+        Dim MSCBlockStart As Integer = 290630
         Dim DS As DataSet = (New AWS.DB.ConnectDB).SQLdataset(SQL)
         Form1.ResetProgbar(DS.Tables(0).DefaultView.Count)
         For Each Row1 In DS.Tables(0).Rows
@@ -58,7 +126,7 @@ Public Class mymastercoins
             Dim Receipient As String = ""
             Dim IsMultiSig As Boolean = False
             Dim CurrencyID As String = "0"
-
+            Dim MinerFee As Double = 0
 
             'Use Block Explorer to get Class B multisig  
             Dim txhash As String = Trim(Row1.Item("TxID"))
@@ -353,8 +421,8 @@ Public Class mymastercoins
                                 Dim SenderID As Integer = GetAddressID(SenderAddress)
                                 Dim AmountToSend2 As Double = Val(AmounttoSend) / 100000000
                                 Dim Balance As Double = GetAddressBalance(SenderID, CurrencyID)
-                                Dim Reserved As Double = (New mymastercoins).GetCurrencyForSale(SenderID, CurrencyID)
-                                '                            Dim Pending As Double = (New mymastercoins).GetSellerCoinsPendingPayment(SenderID, BlockNumber)
+
+                                Dim Reserved As Double = GetReserves(SenderID, CurrencyID, BlockNumber)
                                 Dim Available As Double = (Balance - Reserved)
 
                                 If Available >= AmountToSend2 Then
@@ -380,9 +448,9 @@ Public Class mymastercoins
                             Case 20
                                 'Selling Coins for Bitcoins
                                 CurrencyID = DecodeHexString("Currency ID: ", 8)
-                                If CurrencyID = 1 And dTrans <= Convert.ToDateTime("2014/03/15") Then
+                                If CurrencyID = 1 And BlockNumber < MSCBlockStart Then
                                     '*** 
-                                    Remarks = "MSC Trading has not yet started. (starts in 3/15/2014)"
+                                    Remarks = "MSC DEX starts in Block " + MSCBlockStart.ToString
                                 Else
                                     Dim Currency As String = (New Bitcoin).GetCurrency(CurrencyID)
                                     Dim AmountForSale As String = DecodeHexString("Amount for Sale: ", 16)
@@ -397,7 +465,6 @@ Public Class mymastercoins
                                     Dim AddressID As Integer = GetAddressID(SenderAddress)
                                     SQL = "select ExodusID,Action,Available from z_CurrencyforSale where IsNewOffer=1 and AddressID=" & AddressID
                                     Dim DSPrevious As DataSet = (New AWS.DB.ConnectDB).SQLdataset(SQL)
-                                    Dim IsValidSellOffer As Boolean = False
                                     Dim PrevAction As Integer = 0
                                     Dim PrevAvailable As Double = 0
                                     If DSPrevious.Tables(0).DefaultView.Count > 0 Then
@@ -408,58 +475,66 @@ Public Class mymastercoins
                                     End If
                                     Dim PendingCoins As Double = (New mymastercoins).GetSellerCoinsPendingPayment(AddressID, BlockNumber, CurrencyID)
 
-                                    Select Case Version
-                                        Case 0
-                                            If AmountForSale = 0 Then
-                                                'Cancel
-                                                Action = 3
+                                    If Version = 0 Then
+                                        If AmountForSale = 0 Then
+                                            'Cancel
+                                            Action = 3
+                                        Else
+                                            If PrevAction = 1 Or PrevAction = 2 Then
+                                                Action = 2
                                             Else
-                                                If PrevAction = 1 Or PrevAction = 2 Then
-                                                    Action = 2
-                                                Else
-                                                    Action = 1
-                                                End If
+                                                Action = 1
                                             End If
-                                            IsValidSellOffer = True
+                                        End If
+                                    End If
+
+                                    Dim IsValidSellOffer As Boolean = False
+                                    Select Case Val(Action)
                                         Case 1
-                                            Select Case Val(Action)
-                                                Case 1
-                                                    'New
-                                                    If PrevAvailable = 0 Or PrevAction = 3 Then
-                                                        If PendingCoins > 0 Then
-                                                            Remarks = "Invalid. Seller has " + PendingCoins.ToString + " " + Currency + " pending payment "
-                                                        Else
-                                                            IsValidSellOffer = True
-                                                        End If
-                                                    Else
-                                                        Remarks = "Can't post a new Sell Offer is there is an existing Sell Offer."
-                                                    End If
-                                                Case 2
-                                                    'Update
-                                                    If PrevAction = 1 Or PrevAction = 2 Then
-                                                        IsValidSellOffer = True
-                                                    Else
-                                                        Remarks = "The Previous Sell Offer is a Cancel.  You can only update only if the previous Sell Offer is New or an Update."
-                                                    End If
-                                                Case 3
+                                            'New
+                                            If PrevAvailable = 0 Or PrevAction = 3 Then
+                                                If PendingCoins > 0 Then
+                                                    Remarks = "Invalid. Seller has " + PendingCoins.ToString + " " + Currency + " pending payment."
+                                                Else
                                                     IsValidSellOffer = True
-                                                    AmountForSale = "0"
-                                            End Select
+                                                End If
+                                            Else
+                                                Remarks = "Can't post a new Sell Offer is there is an existing Sell Offer."
+                                            End If
+                                        Case 2
+                                            'Update
+                                            If PrevAction = 1 Or PrevAction = 2 Then
+                                                IsValidSellOffer = True
+                                            Else
+                                                Remarks = "The Previous Sell Offer is a Cancel.  You can only update only if the previous Sell Offer is New or an Update."
+                                            End If
+                                        Case 3
+                                            IsValidSellOffer = True
+                                            AmountForSale = "0"
+                                        Case Else
+                                            Remarks = "Sell Offer Version 1 Invalid Action " + Action
                                     End Select
-                                    If BTCDesired = 0 Then
+                                    If BTCDesired = 0 And Val(Action) <> 3 Then
                                         IsValidSellOffer = False
                                         Remarks = "BTC Desired is 0"
                                     End If
+
+
                                     If IsValidSellOffer Then
                                         Dim Balance As Double = GetAddressBalance(AddressID, CurrencyID)
-                                        Dim Pending As Double = GetSellerCoinsPendingPayment(AddressID, BlockNumber, CurrencyID)
-                                        If AmountForSale > Balance - Pending Then
-                                            AmountForSale = Balance - Pending
+                                        '                                        Dim Reserved As Double = GetReserves(AddressID, CurrencyID, BlockNumber)
+                                        '                                       Dim Available As Double = (Balance - Reserved)
+                                        Dim Available As Double = AmountForSale
+                                        If AmountForSale > Balance Then
+                                            Available = Balance
+                                            '                                          Dim UnitPrice As Double = Math.Round(BTCDesired / AmountForSale, 8)
+                                            '                                           AmountForSale = Balance
+                                            '                                            BTCDesired = Math.Round(AmountForSale * UnitPrice, 8)
                                         End If
                                         SQL = "update z_CurrencyforSale set IsNewOffer=0 where IsNewOffer=1 and AddressID=" & AddressID
                                         Call (New AWS.DB.ConnectDB).SQLExecute(SQL)
                                         SQL = "insert into z_CurrencyforSale (Action,IsNewOffer,Available,dTrans,AddressID,CurrencyID,AmountForSale,BTCDesired,TimeLimit,TransFee,ExodusID) values ( " + _
-                                        Action + ",1," + AmountForSale.ToString + ",'" + dTrans.ToString + "'," + AddressID.ToString + "," + CurrencyID.ToString + "," + AmountForSale.ToString + "," + BTCDesired.ToString + "," + TimeLimit.ToString + "," + TransFee.ToString + "," + ExodusID.ToString + ")"
+                                        Action + ",1," + Available.ToString + ",'" + dTrans.ToString + "'," + AddressID.ToString + "," + CurrencyID.ToString + "," + AmountForSale.ToString + "," + BTCDesired.ToString + "," + TimeLimit.ToString + "," + TransFee.ToString + "," + ExodusID.ToString + ")"
                                         Call (New AWS.DB.ConnectDB).SQLExecute(SQL)
                                         IsValidExodus = True
                                         Select Case Val(Action)
@@ -485,30 +560,58 @@ Public Class mymastercoins
                                 Dim DSAvailable As DataSet = (New AWS.DB.ConnectDB).SQLdataset(SQL)
                                 Dim AmountPurchased As Double = CDbl(AmountPurchasing)
                                 If DSAvailable.Tables(0).DefaultView.Count > 0 Then
-                                    Dim Available = DSAvailable.Tables(0).Rows(0)
-                                    'Get  with waiting for payment
 
+                                    Dim Available = DSAvailable.Tables(0).Rows(0)
                                     Dim CurrencyforSaleID As Integer = Available.Item("CurrencyforSaleID")
-                                    Dim Pending As Double = GetCoinsPendingPayment(CurrencyforSaleID, BlockNumber)
-                                    Dim CFSAvailableCoins As Double = Available.Item("Available")
-                                    Dim AvailableCoins As Double = CFSAvailableCoins - Pending
-                                    If AvailableCoins > 0 Then
-                                        Dim UnitPrice As Double = Available.Item("BTCDesired") / Available.Item("AmountForSale")
-                                        If AmountPurchased > AvailableCoins Then
-                                            AmountPurchased = AvailableCoins
-                                        End If
-                                        Dim BuyerID As Integer = AddAddress(SenderAddress)
-                                        Dim TotalBTC As Double = UnitPrice * AmountPurchased
-                                        Dim TransFee As Double = Available.Item("TransFee")
-                                        Dim PurchasedAmount As Double = AmountPurchased
-                                        Dim MaxBlockNo As Double = BlockNumber + Available.Item("TimeLimit")
-                                        SQL = "insert into z_PurchasingCurrency (PaidPurchasedAmount,MaxBlockNo,CurrencyforSaleID,PurchasedAmount,dTrans,AddressID,CurrencyID,ExodusID,PurchasingAmount,SellerID,IsPaid,UnitPrice,TotalBTC,TransFee,Paid) values ( " + _
-                                            "0," + MaxBlockNo.ToString + "," + CurrencyforSaleID.ToString + "," + PurchasedAmount.ToString + ",'" + dTrans.ToString + "'," + BuyerID.ToString + "," + CurrencyID.ToString + "," + ExodusID.ToString + "," + AmountPurchasing.ToString + "," + SellerID.ToString + ",0," + UnitPrice.ToString + "," + TotalBTC.ToString + "," + TransFee.ToString + ",0)"
-                                        Call (New AWS.DB.ConnectDB).SQLExecute(SQL)
-                                        IsValidExodus = True
-                                        Remarks = "Purchase Offer: " + PurchasedAmount.ToString + "  " + Currency
+
+                                    Dim BuyerID As Integer = AddAddress(SenderAddress)
+                                    SQL = "select * from z_PurchasingCurrency where AddressID=" & BuyerID.ToString & " and CurrencyForSaleID=" & CurrencyforSaleID & _
+                                            " and Paid<TotalBTC and MaxBlockNo>= " & BlockNumber
+                                    Dim DSPrevPurchase As DataSet = (New AWS.DB.ConnectDB).SQLdataset(SQL)
+                                    If DSPrevPurchase.Tables(0).DefaultView.Count > 0 Then
+                                        Remarks = "Invalid. Buyer already has an open purchase offer. TxID " + GetTxID(DSAvailable.Tables(0).Rows(0).Item("ExodusID"))
                                     Else
-                                        Remarks = "Seller " + Receipient + " has no more coins for sale.  (CFS " + Format(CFSAvailableCoins, "########.########") + " Pending " + Format(Pending, "########.########") + ")"
+                                        Dim Pending As Double = GetCoinsPendingPayment(CurrencyforSaleID, BlockNumber)
+                                        Dim CFSAvailableCoins As Double = Available.Item("Available")
+                                        Dim AvailableCoins As Double = CFSAvailableCoins - Pending
+                                        If AvailableCoins > 0 Then
+                                            If IsDBNull(Row1.Item("MinerFee")) Then
+                                                If Not IsDBNull(Row1("bcrawtx")) Then
+                                                    If Row1("bcrawtx") <> "" Then
+                                                        Dim obj As New JObject
+                                                        obj = JsonConvert.DeserializeObject(Row1("bcrawtx"))
+                                                        MinerFee = GetBCMinerFee(obj.Item("inputs").ToString, obj.Item("out").ToString)
+                                                    End If
+                                                End If
+                                                If MinerFee = 0 Then
+                                                    MinerFee = GetBEMinerFee(Row1.Item("beIn"), Row1.Item("beOut"))
+                                                End If
+                                                SQL = "update z_Exodus set MinerFee=" + MinerFee.ToString + " where ExodusID= " + ExodusID.ToString
+                                                Call (New AWS.DB.ConnectDB).SQLExecute(SQL)
+                                            Else
+                                                MinerFee = Row1.Item("MinerFee")
+                                            End If
+                                            If MinerFee < Available.Item("TransFee") Then
+                                                Remarks = "Invalid Purchase Offer.  Miner's Fee " + MinerFee.ToString + " is lower than the required minimum of " + Available.Item("TransFee").ToString
+                                            Else
+                                                Dim UnitPrice As Double = Math.Round(Available.Item("BTCDesired") / Available.Item("AmountForSale"), 8)
+                                                If AmountPurchased > AvailableCoins Then
+                                                    AmountPurchased = AvailableCoins
+                                                End If
+                                                '                                                Dim BuyerID As Integer = AddAddress(SenderAddress)
+                                                Dim TotalBTC As Double = UnitPrice * AmountPurchased
+                                                Dim TransFee As Double = Available.Item("TransFee")
+                                                Dim PurchasedAmount As Double = AmountPurchased
+                                                Dim MaxBlockNo As Double = BlockNumber + Available.Item("TimeLimit")
+                                                SQL = "insert into z_PurchasingCurrency (PaidPurchasedAmount,MaxBlockNo,CurrencyforSaleID,PurchasedAmount,dTrans,AddressID,CurrencyID,ExodusID,PurchasingAmount,SellerID,IsPaid,UnitPrice,TotalBTC,TransFee,Paid) values ( " + _
+                                                    "0," + MaxBlockNo.ToString + "," + CurrencyforSaleID.ToString + "," + PurchasedAmount.ToString + ",'" + dTrans.ToString + "'," + BuyerID.ToString + "," + CurrencyID.ToString + "," + ExodusID.ToString + "," + AmountPurchasing.ToString + "," + SellerID.ToString + ",0," + UnitPrice.ToString + "," + TotalBTC.ToString + "," + TransFee.ToString + ",0)"
+                                                Call (New AWS.DB.ConnectDB).SQLExecute(SQL)
+                                                IsValidExodus = True
+                                                Remarks = "Purchase Offer: " + PurchasedAmount.ToString + "  " + Currency
+                                            End If
+                                        Else
+                                            Remarks = "Seller " + Receipient + " has no more coins for sale.  (CFS " + Format(CFSAvailableCoins, "########.########") + " Pending " + Format(Pending, "########.########") + ")"
+                                        End If
                                     End If
                                 Else
                                     Remarks = "No Offer to Sell from Seller " + Receipient + " or Currency " & Currency
@@ -560,45 +663,48 @@ Public Class mymastercoins
                                         If DSPC.Tables(0).DefaultView.Count > 0 Then
                                             Dim CurrencyID2 As Integer = DSPC.Tables(0).Rows(0).Item("CurrencyID")
                                             Dim CFSID As Integer = DSPC.Tables(0).Rows(0).Item("CurrencyforSaleID")
+
+                                            Dim AmountToSend2 As Double = Math.Round(BTCPaid / DSPC.Tables(0).Rows(0).Item("UnitPrice"), 8)
+
                                             SQL = "select * from z_CurrencyforSale where CurrencyforSaleID=" + CFSID.ToString
                                             Dim DSCFS As DataSet = (New AWS.DB.ConnectDB).SQLdataset(SQL)
                                             If DSCFS.Tables(0).DefaultView.Count > 0 Then
-                                                '                                                Dim UnitPrice As Double = Math.Round(DSCFS.Tables(0).Rows(0).Item("BTCDesired") / DSCFS.Tables(0).Rows(0).Item("AmountforSale"), 8)
-                                                '                                                Dim AmountToSend2 As Double = Math.Round(BTCPaid / UnitPrice, 8)
-                                                Dim AmountToSend2 As Double = Math.Round(BTCPaid * DSCFS.Tables(0).Rows(0).Item("AmountforSale") / DSCFS.Tables(0).Rows(0).Item("BTCDesired"), 8)
-                                                If AmountToSend2 > DSPC.Tables(0).Rows(0).Item("PurchasedAmount") - DSPC.Tables(0).Rows(0).Item("PaidPurchasedAmount") Then
-                                                    AmountToSend2 = DSPC.Tables(0).Rows(0).Item("PurchasedAmount") - DSPC.Tables(0).Rows(0).Item("PaidPurchasedAmount")
-                                                    Remarks = "Overpaid"
-                                                    'Check if there is still reserves from seller
-                                                    'Dim Reserved As Double = (New mymastercoins).GetCurrencyForSale(SellerID, CurrencyID2)
-                                                    'Dim Pending As Double = (New mymastercoins).GetSellerCoinsPendingPayment(SellerID, BlockNumber, CurrencyID2)
-                                                    'Dim BuyerPurchaseAmountRemaining = DSPC.Tables(0).Rows(0).Item("PurchasedAmount") - DSPC.Tables(0).Rows(0).Item("PaidPurchasedAmount")
-                                                    'If Reserved - Pending + BuyerPurchaseAmountRemaining < AmountToSend2 Then
-                                                    'AmountToSend2 = Reserved - Pending + BuyerPurchaseAmountRemaining
-                                                    'End If
-
-                                                End If
-
-                                                'Check if Seller has enough balance
-                                                Dim Balance As Double = GetAddressBalance(SellerID, CurrencyID2)
-                                                If Balance >= AmountToSend2 Then
-                                                    SQL = "update z_PurchasingCurrency set PaidPurchasedAmount=PaidPurchasedAmount+" + AmountToSend2.ToString + _
-                                                        ",Paid=Paid+" + BTCPaid.ToString + _
-                                                        ",IsPaid=1 where PurchasingCurrencyID=" & DSPC.Tables(0).Rows(0).Item("PurchasingCurrencyID")
-                                                    Call (New AWS.DB.ConnectDB).SQLExecute(SQL)
-                                                    Call AddTransaction(dTrans, SellerID, ExodusID, SenderAddress, 0, AmountToSend2, CurrencyID2, BTCPaid.ToString, CFSID)
-                                                    Call AddTransaction(dTrans, BuyerID, ExodusID, SellerAddress, AmountToSend2, 0, CurrencyID2, BTCPaid.ToString)
-                                                    SQL = "update z_CurrencyforSale set Available=Available- " + AmountToSend2.ToString + " where CurrencyforSaleID=" + CFSID.ToString
-                                                    Call (New AWS.DB.ConnectDB).SQLExecute(SQL)
-                                                    IsValidExodus = True
-                                                    Remarks = "Payment: " + BTCPaid.ToString + " btc for " + AmountToSend2.ToString + " " + (New Bitcoin).GetCurrency(CurrencyID2)
-                                                    Exit For
-                                                Else
-                                                    Remarks = "Buyer Payment:  Seller " + SellerAddress + " doesn't have enough coins to send."
-                                                End If
-                                            Else
-                                                Remarks = "Currency for Sale Transaction " + CFSID.ToString + "not found."
+                                                AmountToSend2 = Math.Round(BTCPaid * DSCFS.Tables(0).Rows(0).Item("AmountforSale") / DSCFS.Tables(0).Rows(0).Item("BTCDesired"), 8)
                                             End If
+                                            If AmountToSend2 > DSPC.Tables(0).Rows(0).Item("PurchasedAmount") - DSPC.Tables(0).Rows(0).Item("PaidPurchasedAmount") Then
+                                                AmountToSend2 = DSPC.Tables(0).Rows(0).Item("PurchasedAmount") - DSPC.Tables(0).Rows(0).Item("PaidPurchasedAmount")
+                                                Remarks = "Overpaid"
+                                                'Check if there is still reserves from seller
+                                                'Dim Reserved As Double = (New mymastercoins).GetCurrencyForSale(SellerID, CurrencyID2)
+                                                'Dim Pending As Double = (New mymastercoins).GetSellerCoinsPendingPayment(SellerID, BlockNumber, CurrencyID2)
+                                                'Dim BuyerPurchaseAmountRemaining = DSPC.Tables(0).Rows(0).Item("PurchasedAmount") - DSPC.Tables(0).Rows(0).Item("PaidPurchasedAmount")
+                                                'If Reserved - Pending + BuyerPurchaseAmountRemaining < AmountToSend2 Then
+                                                'AmountToSend2 = Reserved - Pending + BuyerPurchaseAmountRemaining
+                                                'End If
+
+                                            End If
+
+                                            'Check if Seller has enough balance
+                                            Dim Balance As Double = GetAddressBalance(SellerID, CurrencyID2)
+                                            If Balance >= AmountToSend2 Then
+                                                Dim PCID As Integer = DSPC.Tables(0).Rows(0).Item("PurchasingCurrencyID")
+                                                SQL = "update z_PurchasingCurrency set PaidPurchasedAmount=PaidPurchasedAmount+" + Trim(AmountToSend2.ToString) + _
+                                                    ",Paid=Paid+" + BTCPaid.ToString + _
+                                                    ",IsPaid=1 where PurchasingCurrencyID=" & PCID
+                                                Call (New AWS.DB.ConnectDB).SQLExecute(SQL)
+                                                Call AddTransaction(dTrans, SellerID, ExodusID, SenderAddress, 0, AmountToSend2, CurrencyID2, BTCPaid.ToString, CFSID, PCID)
+                                                Call AddTransaction(dTrans, BuyerID, ExodusID, SellerAddress, AmountToSend2, 0, CurrencyID2, BTCPaid.ToString, PCID)
+                                                SQL = "update z_CurrencyforSale set Available=Available-" + Trim(AmountToSend2.ToString) + " where CurrencyforSaleID=" + CFSID.ToString
+                                                Call (New AWS.DB.ConnectDB).SQLExecute(SQL)
+                                                IsValidExodus = True
+                                                Remarks = "Payment: " + BTCPaid.ToString + " btc for " + AmountToSend2.ToString + " " + (New Bitcoin).GetCurrency(CurrencyID2)
+                                                Exit For
+                                            Else
+                                                Remarks = "Buyer Payment:  Seller " + SellerAddress + " doesn't have enough coins to send."
+                                            End If
+                                            '                                        Else
+                                            '                                           Remarks = "Currency for Sale Transaction " + CFSID.ToString + "not found."
+                                            '                                      End If
                                         Else
                                             Remarks = "Buyer Payment:  Purchase confirmation not found or payment time has expired."
                                         End If
@@ -628,6 +734,12 @@ Public Class mymastercoins
         Form1.clearprogbar()
 
     End Sub
+    Function AmounttoSat(ByVal n As Double) As Long
+        Return n * 100000000
+    End Function
+    Function SattoAmount(ByVal n As Long) As Double
+        Return n / 100000000
+    End Function
 
     Function GetbcSender(ByVal bcIn As String) As String
 
@@ -952,9 +1064,9 @@ Public Class mymastercoins
             Return 0
         End If
     End Function
-    Sub AddTransaction(ByVal dTrans As DateTime, ByVal AddressID As Integer, ByVal ExodusID As Integer, ByVal Description As String, ByVal AmountIn As Double, ByVal AmountOut As Double, ByVal CurrencyID As Integer, Optional ByVal TotalPrice As Double = 0, Optional ByVal CFSID As Integer = 0)
-        Dim Sql As String = "insert into z_Transactions (CFSID,dTrans,AddressID,ExodusID,Description,AmountIn,AmountOut,CurrencyID,TotalPrice) values (" + _
-            CFSID.ToString + ",'" + dTrans.ToString + "'," + AddressID.ToString + "," + ExodusID.ToString + ",'" + (New AWS.DB.ConnectDB).HTMLEncode(Description) + "'," + AmountIn.ToString + "," + AmountOut.ToString + ", " + CurrencyID.ToString + "," + TotalPrice.ToString + " ) "
+    Sub AddTransaction(ByVal dTrans As DateTime, ByVal AddressID As Integer, ByVal ExodusID As Integer, ByVal Description As String, ByVal AmountIn As Double, ByVal AmountOut As Double, ByVal CurrencyID As Integer, Optional ByVal TotalPrice As Double = 0, Optional ByVal CFSID As Integer = 0, Optional ByVal PurchasingCurrencyID As Integer = 0)
+        Dim Sql As String = "insert into z_Transactions (PurchasingCurrencyID,CFSID,dTrans,AddressID,ExodusID,Description,AmountIn,AmountOut,CurrencyID,TotalPrice) values (" + _
+            PurchasingCurrencyID.ToString + "," + CFSID.ToString + ",'" + dTrans.ToString + "'," + AddressID.ToString + "," + ExodusID.ToString + ",'" + (New AWS.DB.ConnectDB).HTMLEncode(Description) + "'," + AmountIn.ToString + "," + AmountOut.ToString + ", " + CurrencyID.ToString + "," + TotalPrice.ToString + " ) "
         Call (New AWS.DB.ConnectDB).SQLExecute(Sql)
         Dim CurrencyCode As String = (New Bitcoin).GetCurrency(CurrencyID)
         Sql = "update z_Address set " & CurrencyCode & "=" & CurrencyCode & "+" & (AmountIn - AmountOut).ToString & " where AddressID=" & AddressID
@@ -971,27 +1083,13 @@ Public Class mymastercoins
         Return Balance
     End Function
 
-    Function GetCurrencyForSale(ByVal AddressID As Integer, ByVal CurrencyID As Integer) As Double
-        Dim Sql As String = "select * from z_CurrencyforSale where AddressID=" & AddressID.ToString & " and CurrencyID= " & CurrencyID & " and IsNewOffer=1 order by dTrans"
-        Dim DSAvailable As DataSet = (New AWS.DB.ConnectDB).SQLdataset(Sql)
-        Dim Result As Double = 0
-        If DSAvailable.Tables(0).DefaultView.Count > 0 Then
-            Dim CurrencyforSaleID As Integer = DSAvailable.Tables(0).Rows(0).Item("CurrencyforSaleID")
-            '            Dim CoinsPending As Double = (New mymastercoins).GetCoinsPendingPayment(CurrencyforSaleID, CurrentBlockNo)
-            Dim Available As Double = DSAvailable.Tables(0).Rows(0).Item("Available")
-            '            Result = Available - CoinsPending
-            Result = Available
-        End If
-        Return Result
-    End Function
-
     Function GetSellerCoinsPendingPayment(ByVal SellerID As Integer, ByVal BlockNumber As Integer, ByVal CurrencyID As Integer) As Double
         Dim Pending As Double = 0
-        Dim Sql As String = "SELECT sum(PurchasedAmount) as Pending" + _
+        Dim Sql As String = "SELECT sum(PurchasedAmount-PaidPurchasedAmount) as Pending" + _
 " FROM z_PurchasingCurrency " + _
 " WHERE  SellerID=" + SellerID.ToString + _
 " and MaxBlockNo>=" + BlockNumber.ToString + _
-" and CurrencyID>=" + CurrencyID.ToString
+" and CurrencyID=" + CurrencyID.ToString
         Dim DSPending As DataSet = (New AWS.DB.ConnectDB).SQLdataset(Sql)
         If DSPending.Tables(0).DefaultView.Count > 0 Then
             If Not IsDBNull(DSPending.Tables(0).Rows(0).Item("Pending")) Then
@@ -1059,53 +1157,55 @@ Public Class mymastercoins
         Catch ex As Exception
             lError = True
         End Try
-        If Not lError Then
-            Dim results As List(Of JToken) = obj.Children().ToList
-            Form1.ResetProgbar(results.Count)
-            Dim dTrans As String
-            For Each item As JProperty In results
-                Form1.updateprogbar()
-                item.CreateReader()
+        If Not IsNothing(obj) Then
+            If Not lError Then
+                Dim results As List(Of JToken) = obj.Children().ToList
+                Form1.ResetProgbar(results.Count)
+                Dim dTrans As String
+                For Each item As JProperty In results
+                    item.CreateReader()
 
-                Dim obj2 As New JObject
-                obj2 = JsonConvert.DeserializeObject(item.Value.ToString)
-                Dim hash As String = obj2.Item("hash")
-                dTrans = obj2.Item("time")
-                Dim blocknumber As Integer = obj2.Item("blocknumber")
-                Dim block As String = obj2.Item("block")
-                Dim beIn As String = (New AWS.DB.ConnectDB).HTMLEncode(obj2.Item("in").ToString)
-                Dim beOut As String = (New AWS.DB.ConnectDB).HTMLEncode(obj2.Item("out").ToString)
+                    Dim obj2 As New JObject
+                    obj2 = JsonConvert.DeserializeObject(item.Value.ToString)
+                    Dim hash As String = obj2.Item("hash")
+                    dTrans = obj2.Item("time")
+                    Dim blocknumber As Integer = obj2.Item("blocknumber")
+                    Form1.updateprogbar("Block No. " + blocknumber.ToString)
+                    Dim block As String = obj2.Item("block")
+                    Dim beIn As String = (New AWS.DB.ConnectDB).HTMLEncode(obj2.Item("in").ToString)
+                    Dim beOut As String = (New AWS.DB.ConnectDB).HTMLEncode(obj2.Item("out").ToString)
 
-                hash = (New AWS.DB.ConnectDB).HTMLEncode(hash)
-                If Not (New mymastercoins).IsTxIDinExodus(hash) Then
-                    PostURL = "http://blockexplorer.com/rawtx/" + hash
-                    json = (New Bitcoin).getjson(PostURL)
-                    Dim berawtx As String = (New AWS.DB.ConnectDB).HTMLEncode(json)
+                    hash = (New AWS.DB.ConnectDB).HTMLEncode(hash)
+                    If Not (New mymastercoins).IsTxIDinExodus(hash) Then
+                        PostURL = "http://blockexplorer.com/rawtx/" + hash
+                        json = (New Bitcoin).getjson(PostURL)
+                        Dim berawtx As String = (New AWS.DB.ConnectDB).HTMLEncode(json)
 
-                    '                    PostURL = "http://blockchain.info/rawtx/" + hash
-                    '                   json = (New Bitcoin).getjson(PostURL)
-                    '                    Dim bcrawtx As String = (New AWS.DB.ConnectDB).HTMLEncode(json)
-                    'Depracated function
-                    Dim bcrawtx As String = ""
+                        '                    PostURL = "http://blockchain.info/rawtx/" + hash
+                        '                   json = (New Bitcoin).getjson(PostURL)
+                        '                    Dim bcrawtx As String = (New AWS.DB.ConnectDB).HTMLEncode(json)
+                        'Depracated function
+                        Dim bcrawtx As String = ""
 
-                    Dim beReferenceAddress As String = ""
-                    beReferenceAddress = GetbeSender(beIn)
+                        Dim beReferenceAddress As String = ""
+                        beReferenceAddress = GetbeSender(beIn)
 
-                    SQL = "insert into z_Exodus (beReferenceAddress,beIn,beOut,block,TxID,dTrans,blocknumber,IsValid,IsProcessed,berawtx,bcrawtx) values (" + _
-                        "'" + beReferenceAddress + "','" + beIn + "','" + beOut + "','" + block + "','" + hash + "','" + dTrans.ToString + "'," + blocknumber.ToString + _
-                         ",0,0," + _
-                         "'" + berawtx + "'," + _
-                         "'" + bcrawtx + "')"
+                        SQL = "insert into z_Exodus (beReferenceAddress,beIn,beOut,block,TxID,dTrans,blocknumber,IsValid,IsProcessed,berawtx,bcrawtx) values (" + _
+                            "'" + beReferenceAddress + "','" + beIn + "','" + beOut + "','" + block + "','" + hash + "','" + dTrans.ToString + "'," + blocknumber.ToString + _
+                             ",0,0," + _
+                             "'" + berawtx + "'," + _
+                             "'" + bcrawtx + "')"
 
-                    Call (New AWS.DB.ConnectDB).SQLExecute(SQL)
-                    Result += hash + vbCrLf
-                Else
-                    SQL = "update  z_Exodus set beIn='" + beIn + "',beOut='" + beOut + "',block='" + block + "' where TXID='" + hash + "'"
-                    Call (New AWS.DB.ConnectDB).SQLExecute(SQL)
-                End If
-            Next
+                        Call (New AWS.DB.ConnectDB).SQLExecute(SQL)
+                        Result += hash + vbCrLf
+                    Else
+                        SQL = "update  z_Exodus set beIn='" + beIn + "',beOut='" + beOut + "',block='" + block + "' where TXID='" + hash + "'"
+                        Call (New AWS.DB.ConnectDB).SQLExecute(SQL)
+                    End If
+                Next
+            End If
+            UpdateExodusDevFunds()
         End If
-        UpdateExodusDevFunds()
         Form1.clearprogbar()
         Return Result
     End Function
@@ -1252,5 +1352,5 @@ Public Class mymastercoins
             Call (New AWS.DB.ConnectDB).SQLExecute(Sql)
         End If
     End Sub
-    
+
 End Class

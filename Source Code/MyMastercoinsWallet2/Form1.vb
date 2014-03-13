@@ -49,10 +49,11 @@ Class Form1
     End Sub
 
     Private Sub Form1_Load(ByVal sender As Object, ByVal e As EventArgs) Handles MyBase.Load
-        Me.Text += " 2.01.00"
+        Me.Text += " 2.02.02"
         If My.Settings.ConnectString = "" Then
-            '            My.Settings.ConnectString = "Data Source=tcp:s09.winhost.com;Initial Catalog=DB_66808_mymsc;User ID=DB_66808_mymsc_user;Password=88BottlesofBeer;Integrated Security=False;"
-            My.Settings.ConnectString = "Data Source=.\SQLEXPRESS;AttachDbFilename=""" + CurDir() + "\MYMASTERCOINS.MDF"";Integrated Security=True;User Instance=True"
+            ' My.Settings.ConnectString = "Data Source=.\SQLEXPRESS;AttachDbFilename=""" + CurDir() + "\MYMASTERCOINS.MDF"";Integrated Security=True;User Instance=True"
+            '            My.Settings.ConnectString = "Data Source=(LocalDB)\v11.0;AttachDbFilename=""" + CurDir() + "\MYMASTERCOINS.MDF"";Integrated Security=True"
+            My.Settings.ConnectString = "Data Source=(LocalDB)\v11.0;AttachDbFilename=""|DataDirectory|\MyMastercoins.MDF"";Integrated Security=True"
         End If
         txtConnectString.Text = My.Settings.ConnectString
 
@@ -216,9 +217,10 @@ Class Form1
                 If lOK("Are you sure you want to send " + txtAmount.Text + " " + cboCurrencySend.Text + " to " + txtSendtoBTCA.Text) Then
                     Dim SenderID As Integer = (New mymastercoins).GetAddressID(cboAddress.Text)
                     Dim Balance As Double = (New mymastercoins).GetAddressBalance(SenderID, CurrencyID)
-                    Dim CurrencyForSale As Double = (New mymastercoins).GetCurrencyForSale(SenderID, CurrencyID)
+                    Dim CurrentBlockCount As Integer = (New Bitcoin).GetBlockCount()
+                    Dim Reserve As Double = (New mymastercoins).GetReserves(SenderID, CurrencyID, CurrentBlockCount)
 
-                    If Balance - CurrencyForSale >= txtAmount.Value Then
+                    If Balance - Reserve >= txtAmount.Value Then
                         Dim CoinType As Integer = GetCurrencyInt(cboCurrencySend.Text)
                         Dim SatAmount As BigInteger = (New mlib).AmounttoSat(txtAmount.Value)
                         Dim TxID As String = SendCoin(cboAddress.Text, txtSendtoBTCA.Text, CoinType, SatAmount)
@@ -227,7 +229,7 @@ Class Form1
                             txtAmount.Value = 0
                         End If
                     Else
-                        MessageBox.Show("You can only send " + (Balance - CurrencyForSale).ToString + " " + cboCurrencySend.Text + ".  (Balance: " + Balance.ToString + " -  'For Sale':  " + CurrencyForSale.ToString + ")")
+                        MessageBox.Show("You can only send " + (Balance - Reserve).ToString + " " + cboCurrencySend.Text + ".  (Balance: " + Balance.ToString + " -  'Reserve':  " + Reserve.ToString + ")")
                     End If
                 End If
             Else
@@ -410,8 +412,9 @@ Class Form1
         End If
     End Sub
     Sub ShowAvailable(ByVal AddressID, ByVal CurrencyID)
+        Dim CurrentBlockCount As Integer = (New Bitcoin).GetBlockCount()
         txtTransactionBalance.Value = (New mymastercoins).GetAddressBalance(AddressID, CurrencyID)
-        txtTransactionReserved.Value = (New mymastercoins).GetCurrencyForSale(AddressID, CurrencyID)
+        txtTransactionReserved.Value = (New mymastercoins).GetReserves(AddressID, CurrencyID, CurrentBlockCount)
         txtTransactionAvailable.Value = txtTransactionBalance.Value - txtTransactionReserved.Value
         txtSellAvailable.Value = txtTransactionAvailable.Value
     End Sub
@@ -450,8 +453,15 @@ Class Form1
         ProgressBar1.Maximum = Num
         ProgressBar1.Visible = True
     End Sub
-    Sub updateprogbar()
+    Sub updateprogbar(Optional s As String = "")
         ProgressBar1.Value += 1
+
+        Dim myString As String = ((ProgressBar1.Value * 100) \ ProgressBar1.Maximum).ToString()
+        myString &= "% " + Trim(s)
+        Dim canvas As Graphics = Me.ProgressBar1.CreateGraphics
+        canvas.DrawString(myString, New Font("Verdana", 8, FontStyle.Regular), New SolidBrush(Color.White), 90, 4)
+        canvas.Dispose()
+
     End Sub
     Sub clearprogbar()
         ProgressBar1.Visible = False
@@ -493,7 +503,7 @@ Class Form1
 
     Private Sub Timer1_Tick(ByVal sender As System.Object, ByVal e As System.EventArgs) Handles Timer1.Tick
         Timer1.Interval = 600000
-        txtMessage.Text = "Uploading Transactions "
+        txtMessage.Text = "Synchronizing Wallet "
         Call (New mymastercoins).GetExodusTransBlockExplorer()
         txtMessage.Text = "Processing Transactions "
         Call (New mymastercoins).ProcessTransactions()
@@ -662,9 +672,10 @@ Class Form1
             Dim CurrencyID As Integer = GetCurrencyInt(cboCurrencySend.Text)
 
             Dim Balance As Double = (New mymastercoins).GetAddressBalance(SenderID, CurrencyID)
-            Dim CurrencyForSale As Double = (New mymastercoins).GetCurrencyForSale(SenderID, CurrencyID)
+            Dim CurrentBlockNo As Integer = (New Bitcoin).GetBlockCount()
+            Dim Reserve As Double = (New mymastercoins).GetReserves(SenderID, CurrencyID, CurrentBlockNo)
 
-            If Balance - CurrencyForSale >= Val(TAmount) Then
+            If Balance - Reserve >= Val(TAmount) Then
                 Dim Msg As String = ""
                 For Each Row1 In aLines
                     Dim aRow As Array = Split(Row1, ",")
@@ -679,7 +690,7 @@ Class Form1
                     End If
                 Next
             Else
-                MessageBox.Show("You can only send " + (Balance - CurrencyForSale).ToString + " " + cboCurrencySend.Text + ".  (Balance: " + Balance.ToString + " -  'For Sale':  " + CurrencyForSale.ToString + ")")
+                MessageBox.Show("You can only send " + (Balance - Reserve).ToString + " " + cboCurrencySend.Text + ".  (Balance: " + Balance.ToString + " -  'Reserve':  " + Reserve.ToString + ")")
             End If
         End If
     End Sub
@@ -989,6 +1000,7 @@ Class Form1
         Call (New mymastercoins).GetExodusTransBlockExplorer()
         txtMessage.Text = "Processing Transactions "
         Call (New mymastercoins).ProcessTransactions()
+        Dim BlockCount As Integer = (New Bitcoin).GetBlockCount()
 
         ResetProgbar(1)
         txtMessage.Text = "Loading " + Trim(cboVerify.Text)
@@ -1009,8 +1021,8 @@ Class Form1
             If Address <> "1EXoDusjGwvnjZUyKkxZ4UHEf77z6A5S4P" Then
                 Dim AddressID As Integer = (New mymastercoins).GetAddressID(Address)
                 If AddressID > 0 Then
-                    Dim OffertoSell As Double = (New mymastercoins).GetCurrencyForSale(AddressID, 1)
-                    Dim BalanceMM As Double = Math.Round((New mymastercoins).GetAddressBalance(AddressID, 1) - OffertoSell, 8)
+                    Dim Reserve As Double = (New mymastercoins).GetReserves(AddressID, 1, BlockCount)
+                    Dim BalanceMM As Double = Math.Round((New mymastercoins).GetAddressBalance(AddressID, 1) - Reserve, 8)
                     If BalanceMM <> Balance Then
                         s += BalanceMM.ToString + " " + Address + " " + Balance.ToString + vbCrLf
                     End If
